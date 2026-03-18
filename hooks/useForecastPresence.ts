@@ -14,6 +14,7 @@ interface PresenceUserInput {
 interface PresenceHookOptions {
     channel: RealtimeChannel | null;
     currentUser: PresenceUserInput | null;
+    connectionStatus: string;
     focusedCellKey: string | null;
     editingCellKey: string | null;
 }
@@ -36,6 +37,7 @@ function flattenPresenceState(channel: RealtimeChannel): ForecastPresenceUser[] 
 export function useForecastPresence({
     channel,
     currentUser,
+    connectionStatus,
     focusedCellKey,
     editingCellKey,
 }: PresenceHookOptions) {
@@ -59,7 +61,7 @@ export function useForecastPresence({
     }, [channel]);
 
     useEffect(() => {
-        if (!channel || !currentUser) return;
+        if (!channel || !currentUser || connectionStatus !== 'SUBSCRIBED') return;
 
         void channel.track({
             clientId: currentUser.clientId,
@@ -70,7 +72,7 @@ export function useForecastPresence({
             editingCellKey,
             updatedAt: new Date().toISOString(),
         });
-    }, [channel, currentUser, focusedCellKey, editingCellKey]);
+    }, [channel, currentUser, connectionStatus, focusedCellKey, editingCellKey]);
 
     useEffect(() => {
         return () => {

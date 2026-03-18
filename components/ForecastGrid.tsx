@@ -695,8 +695,14 @@ export default function ForecastGrid({
                     width: 70px;
                     min-width: 70px;
                 }
-                .metric-cell.fcst { color: var(--color-primary); }
-                .metric-cell.plan { color: var(--color-text-muted); }
+                .metric-cell.fcst {
+                    color: var(--color-primary);
+                    background: #faf7ff;
+                }
+                .metric-cell.plan {
+                    color: var(--color-text-muted);
+                    background: #f7fafc;
+                }
                 .metric-cell.var { font-weight: 500; background: #fafafa; }
                 .metric-cell.var.pos { color: var(--color-success); }
                 .metric-cell.var.neg { color: var(--color-danger); }

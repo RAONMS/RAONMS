@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-export function useForecastRealtime(forecastId: string, onDataChanged: () => void) {
+export function useForecastRealtime(forecastId: string, presenceKey: string, onDataChanged: () => void) {
     const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
@@ -12,6 +12,7 @@ export function useForecastRealtime(forecastId: string, onDataChanged: () => voi
         const realtimeChannel = supabase.channel(`forecast:${forecastId}`, {
             config: {
                 broadcast: { self: true },
+                presence: { key: presenceKey },
             },
         });
 
@@ -48,7 +49,7 @@ export function useForecastRealtime(forecastId: string, onDataChanged: () => voi
             void supabase.removeChannel(realtimeChannel);
             setChannel(null);
         };
-    }, [forecastId, onDataChanged]);
+    }, [forecastId, onDataChanged, presenceKey]);
 
     return {
         channel,

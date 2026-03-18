@@ -138,7 +138,7 @@ export default function ForecastPage() {
         void refresh();
     }, [refresh]);
 
-    const { channel, connectionStatus } = useForecastRealtime(forecastId, handleRealtimeRefresh);
+    const { channel, connectionStatus } = useForecastRealtime(forecastId, clientId, handleRealtimeRefresh);
     const collaborationUser = useMemo(() => {
         if (!currentUser) return null;
         return {
@@ -151,6 +151,7 @@ export default function ForecastPage() {
     const { activeUsers, focusedCellsByUser } = useForecastPresence({
         channel,
         currentUser: collaborationUser,
+        connectionStatus,
         focusedCellKey,
         editingCellKey,
     });
