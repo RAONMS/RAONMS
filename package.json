@@ -1,0 +1,42 @@
+{
+  "name": "raon-force-tmp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1007.0",
+    "@opennextjs/cloudflare": "^1.17.1",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "@types/papaparse": "^5.5.2",
+    "@types/uuid": "^10.0.0",
+    "docx": "^9.6.1",
+    "mammoth": "^1.11.0",
+    "next": "^16.1.6",
+    "papaparse": "^5.5.3",
+    "pdf-parse": "^2.4.5",
+    "pdf-parse-fork": "^1.2.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
+    "styled-jsx": "^5.1.7",
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "wrangler": "^4.75.0"
+  }
+}
