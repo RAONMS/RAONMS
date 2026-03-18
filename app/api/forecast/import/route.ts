@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { readLegacyForecastRows, readLegacyProductCharacteristics } from '@/lib/forecastLegacy';
+import { fetchLegacyForecastRows, fetchLegacyProductCharacteristics } from '@/lib/forecastLegacy';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
     const { forecastId = 'default' } = await req.json().catch(() => ({}));
-    const rows = readLegacyForecastRows(forecastId);
+    const assetBaseUrl = new URL(req.url).origin;
+    const rows = await fetchLegacyForecastRows(assetBaseUrl, forecastId);
 
     if (rows.length === 0) {
       return NextResponse.json({ error: 'No legacy forecast rows were found.' }, { status: 404 });
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
       if (insertValuesError) throw insertValuesError;
     }
 
-    const productCharacteristics = readLegacyProductCharacteristics();
+    const productCharacteristics = await fetchLegacyProductCharacteristics(assetBaseUrl);
     await supabase
       .from('app_settings')
       .upsert({
