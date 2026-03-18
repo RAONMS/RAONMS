@@ -15,5 +15,9 @@
   },
   "observability": {
     "enabled": true
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://yozbdrfewcixikadngwv.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvemJkcmZld2NpeGlrYWRuZ3d2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNjU3OTMsImV4cCI6MjA4ODg0MTc5M30.PRfPPyG4YHg81ZiJzhtvHx8BLwVAruQDFmQNACzTJBc"
   }
 }
