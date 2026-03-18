@@ -1,7 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { getSupabasePublicConfig } from '@/lib/supabasePublicConfig';
 
 export async function middleware(request: NextRequest) {
+  const { url, anonKey } = getSupabasePublicConfig();
+
   const hasSupabaseSessionCookie = request.cookies
     .getAll()
     .some(({ name, value }) => name.startsWith('sb-') && name.includes('auth-token') && value);
@@ -23,8 +26,8 @@ export async function middleware(request: NextRequest) {
   });
 
   createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         get(name: string) {
