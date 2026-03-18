@@ -215,6 +215,10 @@ export default function ForecastPage() {
 
     const handleCellEditStart = useCallback(async (rowId: string, month: string, field: string) => {
         const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));
+        if (editingCellKey === cellKey) {
+            return true;
+        }
+
         const locked = await requestLock(cellKey);
         if (!locked) {
             return false;
@@ -223,7 +227,7 @@ export default function ForecastPage() {
         setEditingCellKey(cellKey);
         await broadcastEditStart(cellKey);
         return true;
-    }, [broadcastEditStart, requestLock]);
+    }, [broadcastEditStart, editingCellKey, requestLock]);
 
     const handleCellEditEnd = useCallback(async (rowId: string, month: string, field: string) => {
         const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));

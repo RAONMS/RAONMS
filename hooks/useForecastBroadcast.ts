@@ -84,6 +84,10 @@ export function useForecastBroadcast({ channel, currentUser }: BroadcastHookOpti
         if (!currentUser) return false;
 
         const existingLock = locksByCell[cellKey];
+        if (existingLock && existingLock.clientId === currentUser.clientId && !isExpired(existingLock)) {
+            return true;
+        }
+
         if (existingLock && existingLock.clientId !== currentUser.clientId && !isExpired(existingLock)) {
             setStatusMessage(`${existingLock.userName} is already editing this cell.`);
             if (clearTimerRef.current) window.clearTimeout(clearTimerRef.current);
