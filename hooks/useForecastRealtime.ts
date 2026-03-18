@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 export function useForecastRealtime(forecastId: string, onDataChanged: () => void) {
     const [connectionStatus, setConnectionStatus] = useState('connecting');
+    const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
-    const channel = useMemo(() => {
+    useEffect(() => {
         const realtimeChannel = supabase.channel(`forecast:${forecastId}`, {
             config: {
                 broadcast: { self: true },
@@ -35,19 +37,18 @@ export function useForecastRealtime(forecastId: string, onDataChanged: () => voi
                 () => onDataChanged()
             );
 
-        return realtimeChannel;
-    }, [forecastId, onDataChanged]);
+        setChannel(realtimeChannel);
 
-    useEffect(() => {
-        const subscription = channel.subscribe((status) => {
+        const subscription = realtimeChannel.subscribe((status) => {
             setConnectionStatus(status);
         });
 
         return () => {
             void subscription.unsubscribe();
-            void supabase.removeChannel(channel);
+            void supabase.removeChannel(realtimeChannel);
+            setChannel(null);
         };
-    }, [channel]);
+    }, [forecastId, onDataChanged]);
 
     return {
         channel,
