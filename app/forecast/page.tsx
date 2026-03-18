@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ForecastGrid from '@/components/ForecastGrid';
 import NewForecastEntry from '@/components/NewForecastEntry';
 import ModelGrouping from '@/components/ModelGrouping';
@@ -74,6 +74,7 @@ function mergeHierarchyWithModels(hierarchy: GroupNode[], models: string[]): Gro
 export default function ForecastPage() {
     const [forecastId, setForecastId] = useState(DEFAULT_FORECAST_ID);
     const [clientId] = useState(() => globalThis.crypto?.randomUUID?.() || `forecast-client-${Date.now()}`);
+    const importFileInputRef = useRef<HTMLInputElement>(null);
     const [activeTab, setActiveTab] = useState<'grid' | 'groups' | 'settings'>('grid');
     const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
     const [isImportingLegacy, setIsImportingLegacy] = useState(false);
@@ -256,29 +257,39 @@ export default function ForecastPage() {
         setMonthSpecificPlanVar({});
     }, [globalPlanVarVisible]);
 
-    const handleImportLegacyForecast = useCallback(async () => {
+    const handleImportLegacyForecast = useCallback(async (file: File) => {
         setIsImportingLegacy(true);
         try {
+            const formData = new FormData();
+            formData.append('forecastId', forecastId);
+            formData.append('file', file);
+
             const res = await fetch('/api/forecast/import', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ forecastId }),
+                body: formData,
             });
             const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.error || 'Legacy import failed');
+                throw new Error(data.error || 'CSV import failed');
             }
 
             await refresh();
             setHasPendingChanges(false);
-            alert(`Imported ${data.importedEntries} forecast entries from the legacy file.`);
+            alert(`Imported ${data.importedEntries} forecast entries from CSV.`);
         } catch (error: any) {
-            console.error('Legacy import failed', error);
-            alert(error.message || 'Legacy import failed');
+            console.error('CSV import failed', error);
+            alert(error.message || 'CSV import failed');
         } finally {
             setIsImportingLegacy(false);
         }
     }, [forecastId, refresh]);
+
+    const handleImportFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        void handleImportLegacyForecast(file);
+        event.target.value = '';
+    }, [handleImportLegacyForecast]);
 
     // Set Header Actions
     useEffect(() => {
@@ -299,8 +310,8 @@ export default function ForecastPage() {
                     <button className="btn btn-secondary" onClick={showAllColumns}>
                         Show All Columns
                     </button>
-                    <button className="btn btn-secondary" onClick={handleImportLegacyForecast} disabled={isImportingLegacy}>
-                        {isImportingLegacy ? 'Importing...' : 'Import Legacy Forecast'}
+                    <button className="btn btn-secondary" onClick={() => importFileInputRef.current?.click()} disabled={isImportingLegacy}>
+                        {isImportingLegacy ? 'Importing...' : 'Upload Forecast CSV'}
                     </button>
                     <button className="btn btn-primary" onClick={() => setIsNewEntryOpen(true)}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
@@ -537,6 +548,14 @@ export default function ForecastPage() {
                     onCreate={addForecastEntry}
                 />
             )}
+
+            <input
+                ref={importFileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                style={{ display: 'none' }}
+                onChange={handleImportFileChange}
+            />
             
             <style jsx>{`
                 .page-container {

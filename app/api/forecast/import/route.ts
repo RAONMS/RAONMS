@@ -1,14 +1,40 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { fetchLegacyForecastRows, fetchLegacyProductCharacteristics } from '@/lib/forecastLegacy';
+import { fetchLegacyProductCharacteristics, parseLegacyForecastCsv } from '@/lib/forecastLegacy';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { forecastId = 'default' } = await req.json().catch(() => ({}));
-    const assetBaseUrl = new URL(req.url).origin;
-    const rows = await fetchLegacyForecastRows(assetBaseUrl, forecastId);
+    let forecastId = 'default';
+    let rows;
+    let productCharacteristics = {};
+
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      forecastId = String(formData.get('forecastId') || 'default');
+      const csvFile = formData.get('file');
+      const characteristicsFile = formData.get('characteristicsFile');
+
+      if (!(csvFile instanceof File)) {
+        return NextResponse.json({ error: 'CSV file is required.' }, { status: 400 });
+      }
+
+      rows = parseLegacyForecastCsv(await csvFile.text(), forecastId);
+
+      if (characteristicsFile instanceof File) {
+        productCharacteristics = JSON.parse(await characteristicsFile.text());
+      }
+    } else {
+      const body = await req.json().catch(() => ({}));
+      forecastId = body.forecastId || 'default';
+      if (typeof body.csvText !== 'string' || !body.csvText.trim()) {
+        return NextResponse.json({ error: 'CSV content is required.' }, { status: 400 });
+      }
+      rows = parseLegacyForecastCsv(body.csvText, forecastId);
+      productCharacteristics = body.productCharacteristics || {};
+    }
 
     if (rows.length === 0) {
       return NextResponse.json({ error: 'No legacy forecast rows were found.' }, { status: 404 });
@@ -73,7 +99,6 @@ export async function POST(req: Request) {
       if (insertValuesError) throw insertValuesError;
     }
 
-    const productCharacteristics = await fetchLegacyProductCharacteristics(assetBaseUrl);
     await supabase
       .from('app_settings')
       .upsert({

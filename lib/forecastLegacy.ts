@@ -33,53 +33,7 @@ function normalizeMonth(monthValue: string): string | null {
 export function readLegacyForecastRows(forecastId = 'default'): ForecastRow[] {
   const filePath = path.join(process.cwd(), 'forecast', 'forecast_master_database.csv');
   const csvContent = fs.readFileSync(filePath, 'utf8');
-  const parsed = Papa.parse(csvContent, {
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: true,
-  });
-
-  const rows: ForecastRow[] = [];
-  const seenKeys = new Map<string, number>();
-
-  (parsed.data as Record<string, string | number | null | undefined>[]).forEach((row) => {
-    const model = String(row.Model || '').trim();
-    const customer = String(row.Customer || '').trim();
-    const standard = String(row.Standard || '').trim();
-    const application = String(row.Application || '').trim();
-    const location = String(row.Location || '').trim();
-    const normalizedMonth = normalizeMonth(String(row.Month || ''));
-
-    if (!model || !customer || !standard || !normalizedMonth) return;
-
-    const key = `${model}|${customer}|${standard}|${application}|${location}`;
-
-    if (!seenKeys.has(key)) {
-      seenKeys.set(key, rows.length);
-      rows.push({
-        id: key,
-        forecastId,
-        model,
-        customer,
-        standard,
-        application,
-        location,
-        data: {},
-      });
-    }
-
-    const rowIndex = seenKeys.get(key)!;
-    rows[rowIndex].data[normalizedMonth] = {
-      fcstQty: Number(row["FCST_Q'ty"] || 0),
-      fcstAsp: Number(row.FCST_ASP || 0),
-      fcstAmt: Number(row.FCST_AMT || 0),
-      planQty: Number(row["PLAN_Q'ty"] || 0),
-      planAsp: Number(row.PLAN_ASP || 0),
-      planAmt: Number(row.PLAN_AMT || 0),
-    };
-  });
-
-  return rows;
+  return parseLegacyForecastCsv(csvContent, forecastId);
 }
 
 export function readLegacyProductCharacteristics() {
@@ -100,7 +54,10 @@ export async function fetchLegacyForecastRows(assetBaseUrl: string, forecastId =
     throw new Error(`Failed to fetch legacy forecast CSV: ${response.status}`);
   }
 
-  const csvContent = await response.text();
+  return parseLegacyForecastCsv(await response.text(), forecastId);
+}
+
+export function parseLegacyForecastCsv(csvContent: string, forecastId = 'default') {
   const parsed = Papa.parse(csvContent, {
     header: true,
     skipEmptyLines: true,
