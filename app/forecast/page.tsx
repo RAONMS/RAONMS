@@ -76,6 +76,7 @@ export default function ForecastPage() {
     const [clientId] = useState(() => globalThis.crypto?.randomUUID?.() || `forecast-client-${Date.now()}`);
     const [activeTab, setActiveTab] = useState<'grid' | 'groups' | 'settings'>('grid');
     const [isNewEntryOpen, setIsNewEntryOpen] = useState(false);
+    const [isImportingLegacy, setIsImportingLegacy] = useState(false);
     const [hasPendingChanges, setHasPendingChanges] = useState(false);
     const [focusedCellKey, setFocusedCellKey] = useState<string | null>(null);
     const [editingCellKey, setEditingCellKey] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export default function ForecastPage() {
     const [lockedMonths, setLockedMonths] = useState<Set<string>>(new Set());
     const [hiddenMonths, setHiddenMonths] = useState<Set<string>>(new Set());
     const [monthSpecificPlanVar, setMonthSpecificPlanVar] = useState<Record<string, boolean>>({});
+    const [hierarchyCloudHydrated, setHierarchyCloudHydrated] = useState(false);
 
     // Dynamic Timeline: Current Year + Next Year (24 months)
     const timeline = useMemo(() => getForecastTimeline(), []);
@@ -254,6 +256,30 @@ export default function ForecastPage() {
         setMonthSpecificPlanVar({});
     }, [globalPlanVarVisible]);
 
+    const handleImportLegacyForecast = useCallback(async () => {
+        setIsImportingLegacy(true);
+        try {
+            const res = await fetch('/api/forecast/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forecastId }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Legacy import failed');
+            }
+
+            await refresh();
+            setHasPendingChanges(false);
+            alert(`Imported ${data.importedEntries} forecast entries from the legacy file.`);
+        } catch (error: any) {
+            console.error('Legacy import failed', error);
+            alert(error.message || 'Legacy import failed');
+        } finally {
+            setIsImportingLegacy(false);
+        }
+    }, [forecastId, refresh]);
+
     // Set Header Actions
     useEffect(() => {
         if (activeTab === 'grid') {
@@ -273,6 +299,9 @@ export default function ForecastPage() {
                     <button className="btn btn-secondary" onClick={showAllColumns}>
                         Show All Columns
                     </button>
+                    <button className="btn btn-secondary" onClick={handleImportLegacyForecast} disabled={isImportingLegacy}>
+                        {isImportingLegacy ? 'Importing...' : 'Import Legacy Forecast'}
+                    </button>
                     <button className="btn btn-primary" onClick={() => setIsNewEntryOpen(true)}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
                             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -285,7 +314,7 @@ export default function ForecastPage() {
             setActions(null);
         }
         return () => setActions(null);
-    }, [activeTab, setActions, showAllColumns, revealAllMonths, globalPlanVarVisible, handleGlobalPlanVarToggle, hasPendingChanges, isSaving, forecastData]);
+    }, [activeTab, setActions, showAllColumns, revealAllMonths, globalPlanVarVisible, handleGlobalPlanVarToggle, hasPendingChanges, isSaving, forecastData, handleImportLegacyForecast, isImportingLegacy]);
 
     const uniqueModels = useMemo(() => {
         const models = Array.from(new Set(forecastData.map(d => d.model))).sort();
@@ -335,6 +364,50 @@ export default function ForecastPage() {
             }
         }
     }, [activeTab]); // Refresh when switching back to grid
+
+    useEffect(() => {
+        let active = true;
+
+        void (async () => {
+            try {
+                const res = await fetch(`/api/forecast/hierarchy?forecastId=${encodeURIComponent(forecastId)}`, {
+                    cache: 'no-store',
+                });
+                const data = await res.json();
+                if (!active || !res.ok || !data.hierarchy) return;
+                setHierarchy(data.hierarchy);
+                localStorage.setItem('rsp_model_hierarchy_v1', JSON.stringify(data.hierarchy));
+            } catch (error) {
+                console.error('Failed to load cloud hierarchy', error);
+            } finally {
+                if (active) {
+                    setHierarchyCloudHydrated(true);
+                }
+            }
+        })();
+
+        return () => {
+            active = false;
+        };
+    }, [forecastId]);
+
+    useEffect(() => {
+        if (!hierarchyCloudHydrated) return;
+
+        const timeoutId = window.setTimeout(() => {
+            void fetch('/api/forecast/hierarchy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ forecastId, hierarchy }),
+            }).catch((error) => {
+                console.error('Failed to save cloud hierarchy', error);
+            });
+        }, 250);
+
+        return () => {
+            window.clearTimeout(timeoutId);
+        };
+    }, [forecastId, hierarchy, hierarchyCloudHydrated]);
 
     useEffect(() => {
         return () => {
