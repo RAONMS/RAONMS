@@ -641,9 +641,10 @@ export default function ForecastPage() {
                     to { opacity: 1; transform: translateY(0); }
                 }
                 .btn-secondary {
-                    background: #f8fafc;
-                    color: #1f2937;
-                    border: 1px solid #94a3b8;
+                    background: #f8fafc !important;
+                    color: #334155 !important;
+                    border: 1px solid #94a3b8 !important;
+                    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
                     font-size: 13px;
                     padding: 8px 16px;
                     font-weight: 600;
@@ -652,9 +653,9 @@ export default function ForecastPage() {
                     gap: 6px;
                 }
                 .btn-secondary:hover {
-                    background: #eef2f7;
-                    border-color: #64748b;
-                    color: #111827;
+                    background: #f1f5f9 !important;
+                    border-color: #64748b !important;
+                    color: #0f172a !important;
                 }
                 .btn-primary {
                     display: flex;

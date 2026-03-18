@@ -417,14 +417,13 @@ export default function ForecastGrid({
                                                                             step="any"
                                                                             value={fcstQty === 0 ? '' : fcstQty} 
                                                                             disabled={isCellLocked(fcstQtyCellKey, currentClientId)}
-                                                                            onFocus={() => { void onCellFocus(row.id, m, 'fcstQty'); }}
+                                                                            onFocus={() => {
+                                                                                void onCellFocus(row.id, m, 'fcstQty');
+                                                                                void onCellEditStart(row.id, m, 'fcstQty');
+                                                                            }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstQty'); }}
                                                                             onChange={(e) => {
-                                                                                void (async () => {
-                                                                                    const allowed = await onCellEditStart(row.id, m, 'fcstQty');
-                                                                                    if (!allowed) return;
-                                                                                    onCellEdit(originalIdx, m, 'fcstQty', parseFloat(e.target.value) || 0);
-                                                                                })();
+                                                                                onCellEdit(originalIdx, m, 'fcstQty', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
@@ -441,14 +440,13 @@ export default function ForecastGrid({
                                                                             step="0.01"
                                                                             value={fcstAsp === 0 ? '' : fcstAsp} 
                                                                             disabled={isCellLocked(fcstAspCellKey, currentClientId)}
-                                                                            onFocus={() => { void onCellFocus(row.id, m, 'fcstAsp'); }}
+                                                                            onFocus={() => {
+                                                                                void onCellFocus(row.id, m, 'fcstAsp');
+                                                                                void onCellEditStart(row.id, m, 'fcstAsp');
+                                                                            }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstAsp'); }}
                                                                             onChange={(e) => {
-                                                                                void (async () => {
-                                                                                    const allowed = await onCellEditStart(row.id, m, 'fcstAsp');
-                                                                                    if (!allowed) return;
-                                                                                    onCellEdit(originalIdx, m, 'fcstAsp', parseFloat(e.target.value) || 0);
-                                                                                })();
+                                                                                onCellEdit(originalIdx, m, 'fcstAsp', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
@@ -465,14 +463,13 @@ export default function ForecastGrid({
                                                                             step="0.01"
                                                                             value={fcstAmt === 0 ? '' : fcstAmt} 
                                                                             disabled={isCellLocked(fcstAmtCellKey, currentClientId)}
-                                                                            onFocus={() => { void onCellFocus(row.id, m, 'fcstAmt'); }}
+                                                                            onFocus={() => {
+                                                                                void onCellFocus(row.id, m, 'fcstAmt');
+                                                                                void onCellEditStart(row.id, m, 'fcstAmt');
+                                                                            }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstAmt'); }}
                                                                             onChange={(e) => {
-                                                                                void (async () => {
-                                                                                    const allowed = await onCellEditStart(row.id, m, 'fcstAmt');
-                                                                                    if (!allowed) return;
-                                                                                    onCellEdit(originalIdx, m, 'fcstAmt', parseFloat(e.target.value) || 0);
-                                                                                })();
+                                                                                onCellEdit(originalIdx, m, 'fcstAmt', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
