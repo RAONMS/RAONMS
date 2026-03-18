@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Papa from 'papaparse';
 
 export default function SettingsPage() {
     const [revFile, setRevFile] = useState<File | null>(null);
@@ -51,14 +52,23 @@ export default function SettingsPage() {
         setLoading(type);
         setMessage(null);
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('type', type);
-
         try {
+            const csvText = await file.text();
+            const parsed = Papa.parse<Record<string, unknown>>(csvText, {
+                header: true,
+                skipEmptyLines: true,
+            });
+
+            if (parsed.errors.length > 0) {
+                throw new Error(parsed.errors[0]?.message || 'CSV parsing failed');
+            }
+
+            const rows = parsed.data;
+
             const res = await fetch('/api/ingest', {
                 method: 'POST',
-                body: formData
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, rows })
             });
             const data = await res.json();
             if (data.success) {
@@ -117,17 +127,17 @@ export default function SettingsPage() {
                     </div>
                     <div className="settings-card-content">
                         <p className="settings-help-text">
-                            Sync your local Excel data with the cloud database. Uploading a new file will 
+                            Sync your local CSV data with the cloud database. Uploading a new file will 
                             <strong> replace</strong> all existing cloud data for that category.
                         </p>
 
                         <div className="upload-stack">
                             <div className="upload-item">
-                                <label>Revenue Data (.XLSX)</label>
+                                <label>Revenue Data (.CSV)</label>
                                 <div className="file-input-group">
                                     <input 
                                         type="file" 
-                                        accept=".xlsx" 
+                                        accept=".csv" 
                                         onChange={(e) => setRevFile(e.target.files?.[0] || null)} 
                                     />
                                     <button 
@@ -141,11 +151,11 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="upload-item">
-                                <label>Backlog Data (.XLSX)</label>
+                                <label>Backlog Data (.CSV)</label>
                                 <div className="file-input-group">
                                     <input 
                                         type="file" 
-                                        accept=".xlsx" 
+                                        accept=".csv" 
                                         onChange={(e) => setBklgFile(e.target.files?.[0] || null)} 
                                     />
                                     <button 

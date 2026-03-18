@@ -1,22 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import * as XLSX from 'xlsx';
 
 export async function POST(request: Request) {
     try {
-        const formData = await request.formData();
-        const file = formData.get('file') as File;
-        const type = formData.get('type') as string; // 'revenue' or 'backlog'
+        const { rows, type } = await request.json();
 
-        if (!file || !type) {
-            return NextResponse.json({ error: 'Missing file or type' }, { status: 400 });
+        if (!type || !Array.isArray(rows)) {
+            return NextResponse.json({ error: 'Missing rows or type' }, { status: 400 });
         }
-
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet);
 
         if (type === 'revenue') {
             // Mapping for revenue

@@ -5,7 +5,7 @@ import { useState, useRef } from 'react';
 interface FileAttachment {
     name: string;
     type: string;
-    base64: string;
+    text: string;
 }
 
 export default function SummariserPage() {
@@ -22,20 +22,16 @@ export default function SummariserPage() {
         }
     }
 
-    const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = error => reject(error);
-    });
-
     async function generateSummary() {
         setLoading(true);
         try {
             const attachedFiles: FileAttachment[] = [];
             for (const f of files) {
-                const b64 = await toBase64(f);
-                attachedFiles.push({ name: f.name, type: f.type, base64: b64 });
+                attachedFiles.push({
+                    name: f.name,
+                    type: f.type,
+                    text: await f.text(),
+                });
             }
 
             const res = await fetch('/api/ai/business-summarize', {
@@ -67,7 +63,7 @@ export default function SummariserPage() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Summary_${new Date().toISOString().slice(0, 10)}.docx`;
+            a.download = `Summary_${new Date().toISOString().slice(0, 10)}.doc`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -99,7 +95,7 @@ export default function SummariserPage() {
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Attachments (PDF, Docx, Text)</label>
+                    <label className="form-label" style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Attachments (Text files only)</label>
                     <div 
                         onClick={() => fileInputRef.current?.click()}
                         style={{
@@ -122,8 +118,11 @@ export default function SummariserPage() {
                             ref={fileInputRef} 
                             style={{ display: 'none' }} 
                             onChange={handleFileChange}
-                            accept=".pdf,.docx,.txt"
+                            accept=".txt,.md,.csv"
                         />
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 13, color: 'var(--color-text-muted)' }}>
+                        Cloudflare free-plan deployment uses lightweight text attachments to keep the worker bundle within size limits.
                     </div>
                     {files.length > 0 && (
                         <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -178,7 +177,7 @@ export default function SummariserPage() {
 
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button className="btn btn-success" onClick={downloadDocx} style={{ flex: 1 }}>
-                                📄 Download as Word (.docx)
+                                📄 Download as Word (.doc)
                             </button>
                             <button className="btn btn-secondary" onClick={() => {
                                 navigator.clipboard.writeText(result || '');

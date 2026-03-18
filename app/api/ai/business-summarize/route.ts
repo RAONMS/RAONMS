@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { supabase } from '@/lib/supabase';
-import mammoth from 'mammoth';
 
 export async function POST(req: Request) {
     try {
-        const pdf = require('pdf-parse-fork');
         const bedrock = new BedrockRuntimeClient({
             region: process.env.APP_AWS_REGION || 'us-east-1',
             credentials: {
@@ -20,18 +18,8 @@ export async function POST(req: Request) {
         // Process attachments if any
         if (files && Array.isArray(files)) {
             for (const file of files) {
-                const buffer = Buffer.from(file.base64, 'base64');
-                
-                if (file.type === 'application/pdf') {
-                    const pdfData = await pdf(buffer);
-                    consolidatedText += `\n\n--- Content from ${file.name} (PDF) ---\n${pdfData.text}`;
-                } 
-                else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                    const docxData = await mammoth.extractRawText({ buffer });
-                    consolidatedText += `\n\n--- Content from ${file.name} (Word) ---\n${docxData.value}`;
-                }
-                else if (file.type.startsWith('text/') || file.name.endsWith('.txt')) {
-                    consolidatedText += `\n\n--- Content from ${file.name} ---\n${buffer.toString('utf-8')}`;
+                if (typeof file.text === 'string' && file.text.trim()) {
+                    consolidatedText += `\n\n--- Content from ${file.name} ---\n${file.text}`;
                 }
             }
         }
