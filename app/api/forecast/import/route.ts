@@ -1,11 +1,38 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { fetchLegacyProductCharacteristics, parseLegacyForecastCsv } from '@/lib/forecastLegacy';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { getSupabasePublicConfig } from '@/lib/supabasePublicConfig';
+import { parseLegacyForecastCsv } from '@/lib/forecastLegacy';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+    const { url, anonKey } = getSupabasePublicConfig();
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      throw userError;
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'You must be signed in to import forecast data.' }, { status: 401 });
+    }
+
     let forecastId = 'default';
     let rows;
     let productCharacteristics = {};
@@ -47,6 +74,8 @@ export async function POST(req: Request) {
       standard: row.standard,
       application: row.application,
       location: row.location,
+      created_by: user.id,
+      updated_by: user.id,
     }));
 
     const { error: deleteValuesError } = await supabase
@@ -89,6 +118,7 @@ export async function POST(req: Request) {
         plan_qty: Number(metrics.planQty || 0),
         plan_asp: Number(metrics.planAsp || 0),
         plan_amt: Number(metrics.planAmt || 0),
+        updated_by: user.id,
       }));
     });
 
