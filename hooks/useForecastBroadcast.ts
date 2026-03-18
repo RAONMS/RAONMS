@@ -14,13 +14,20 @@ interface BroadcastUserInput {
 interface BroadcastHookOptions {
     channel: RealtimeChannel | null;
     currentUser: BroadcastUserInput | null;
+    onRemoteCellValueChange?: (payload: {
+        clientId: string;
+        rowId: string;
+        month: string;
+        field: string;
+        value: number;
+    }) => void;
 }
 
 function isExpired(lock: ForecastCellLock) {
     return lock.expiresAt <= Date.now();
 }
 
-export function useForecastBroadcast({ channel, currentUser }: BroadcastHookOptions) {
+export function useForecastBroadcast({ channel, currentUser, onRemoteCellValueChange }: BroadcastHookOptions) {
     const [locksByCell, setLocksByCell] = useState<Record<string, ForecastCellLock>>({});
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const clearTimerRef = useRef<number | null>(null);
@@ -46,12 +53,24 @@ export function useForecastBroadcast({ channel, currentUser }: BroadcastHookOpti
             .on('broadcast', { event: 'cell_focus' }, () => {})
             .on('broadcast', { event: 'cell_blur' }, () => {})
             .on('broadcast', { event: 'cell_edit_start' }, () => {})
-            .on('broadcast', { event: 'cell_edit_end' }, () => {});
+            .on('broadcast', { event: 'cell_edit_end' }, () => {})
+            .on('broadcast', { event: 'cell_value_change' }, ({ payload }) => {
+                const change = payload as {
+                    clientId: string;
+                    rowId: string;
+                    month: string;
+                    field: string;
+                    value: number;
+                };
+
+                if (change.clientId === currentUser?.clientId) return;
+                onRemoteCellValueChange?.(change);
+            });
 
         return () => {
             // Channel lifecycle is owned by useForecastRealtime.
         };
-    }, [channel]);
+    }, [channel, currentUser?.clientId, onRemoteCellValueChange]);
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -157,6 +176,14 @@ export function useForecastBroadcast({ channel, currentUser }: BroadcastHookOpti
         broadcastCellBlur: (cellKey: string) => broadcastEvent('cell_blur', { cellKey, clientId: currentUser?.clientId || null }),
         broadcastEditStart: (cellKey: string) => broadcastEvent('cell_edit_start', { cellKey, clientId: currentUser?.clientId || null }),
         broadcastEditEnd: (cellKey: string) => broadcastEvent('cell_edit_end', { cellKey, clientId: currentUser?.clientId || null }),
+        broadcastCellValueChange: (rowId: string, month: string, field: string, value: number) =>
+            broadcastEvent('cell_value_change', {
+                clientId: currentUser?.clientId || null,
+                rowId,
+                month,
+                field,
+                value,
+            }),
     }), [
         locksByCell,
         statusMessage,

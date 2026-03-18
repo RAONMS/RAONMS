@@ -43,12 +43,18 @@ export function useForecastPresence({
 }: PresenceHookOptions) {
     const [activeUsers, setActiveUsers] = useState<ForecastPresenceUser[]>([]);
 
-    useEffect(() => {
-        if (!channel) return;
+    const syncPresence = useMemo(() => {
+        if (!channel) {
+            return () => setActiveUsers([]);
+        }
 
-        const syncPresence = () => {
+        return () => {
             setActiveUsers(flattenPresenceState(channel));
         };
+    }, [channel]);
+
+    useEffect(() => {
+        if (!channel) return;
 
         channel
             .on('presence', { event: 'sync' }, syncPresence)
@@ -58,7 +64,7 @@ export function useForecastPresence({
         return () => {
             // Channel lifecycle is owned by useForecastRealtime.
         };
-    }, [channel]);
+    }, [channel, syncPresence]);
 
     useEffect(() => {
         if (!channel || !currentUser || connectionStatus !== 'SUBSCRIBED') return;
@@ -71,8 +77,16 @@ export function useForecastPresence({
             focusedCellKey,
             editingCellKey,
             updatedAt: new Date().toISOString(),
+        }).then(() => {
+            syncPresence();
         });
-    }, [channel, currentUser, connectionStatus, focusedCellKey, editingCellKey]);
+    }, [channel, currentUser, connectionStatus, focusedCellKey, editingCellKey, syncPresence]);
+
+    useEffect(() => {
+        if (connectionStatus === 'SUBSCRIBED') {
+            syncPresence();
+        }
+    }, [connectionStatus, syncPresence]);
 
     useEffect(() => {
         return () => {

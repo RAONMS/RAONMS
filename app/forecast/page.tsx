@@ -167,9 +167,23 @@ export default function ForecastPage() {
         broadcastCellBlur,
         broadcastEditStart,
         broadcastEditEnd,
+        broadcastCellValueChange,
     } = useForecastBroadcast({
         channel,
         currentUser: collaborationUser,
+        onRemoteCellValueChange: ({ rowId, month, field, value }) => {
+            setForecastData((prev) => {
+                const next = [...prev];
+                const rowIndex = next.findIndex((row) => row.id === rowId);
+                if (rowIndex === -1) return prev;
+
+                const row = { ...next[rowIndex] };
+                row.data = { ...row.data };
+                row.data[month] = { ...row.data[month], [field]: value };
+                next[rowIndex] = row;
+                return next;
+            });
+        },
     });
 
     const handleSave = async () => {
@@ -188,7 +202,7 @@ export default function ForecastPage() {
         }
     };
 
-    const handleCellEdit = (rowIndex: number, month: string, field: string, value: number) => {
+    const handleCellEdit = (rowId: string, rowIndex: number, month: string, field: string, value: number) => {
         setForecastData(prev => {
             const next = [...prev];
             const row = { ...next[rowIndex] };
@@ -198,6 +212,7 @@ export default function ForecastPage() {
             return next;
         });
         setHasPendingChanges(true);
+        void broadcastCellValueChange(rowId, month, field, value);
     };
 
     const handleCellFocus = useCallback(async (rowId: string, month: string, field: string) => {

@@ -28,7 +28,7 @@ interface ForecastGridProps {
     onToggleLock: (month: string) => void;
     onToggleMonthVisibility: (month: string) => void;
     onToggleMonthPlanVar: (month: string) => void;
-    onCellEdit: (rowIndex: number, month: string, field: string, value: number) => void;
+    onCellEdit: (rowId: string, rowIndex: number, month: string, field: string, value: number) => void;
     focusedCellsByUser: Record<string, ForecastPresenceUser>;
     locksByCell: Record<string, ForecastCellLock>;
     currentClientId: string;
@@ -423,7 +423,7 @@ export default function ForecastGrid({
                                                                             }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstQty'); }}
                                                                             onChange={(e) => {
-                                                                                onCellEdit(originalIdx, m, 'fcstQty', parseFloat(e.target.value) || 0);
+                                                                                onCellEdit(row.id, originalIdx, m, 'fcstQty', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
@@ -446,7 +446,7 @@ export default function ForecastGrid({
                                                                             }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstAsp'); }}
                                                                             onChange={(e) => {
-                                                                                onCellEdit(originalIdx, m, 'fcstAsp', parseFloat(e.target.value) || 0);
+                                                                                onCellEdit(row.id, originalIdx, m, 'fcstAsp', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
@@ -469,7 +469,7 @@ export default function ForecastGrid({
                                                                             }}
                                                                             onBlur={() => { void onCellBlur(row.id, m, 'fcstAmt'); }}
                                                                             onChange={(e) => {
-                                                                                onCellEdit(originalIdx, m, 'fcstAmt', parseFloat(e.target.value) || 0);
+                                                                                onCellEdit(row.id, originalIdx, m, 'fcstAmt', parseFloat(e.target.value) || 0);
                                                                             }}
                                                                             onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
                                                                         />
