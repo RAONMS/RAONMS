@@ -307,7 +307,7 @@ export default function ForecastGrid({
                                 const showPlanVar = monthSpecificPlanVar[m] ?? globalPlanVarVisible;
                                 return (
                                     <React.Fragment key={m}>
-                                        <th className="metric-header fcst tier-3">Qty</th>
+                                        <th className="metric-header fcst tier-3 month-start">Qty</th>
                                         <th className="metric-header fcst tier-3">ASP</th>
                                         <th className={`metric-header fcst tier-3 ${!showPlanVar ? 'month-separator' : ''}`}>AMT</th>
                                         {showPlanVar && (
@@ -400,7 +400,7 @@ export default function ForecastGrid({
                                                         const showPlanVar = monthSpecificPlanVar[m] ?? globalPlanVarVisible;
                                                         return (
                                                             <React.Fragment key={m}>
-                                                                <td className="metric-cell fcst group-total">{formatQty(t.fcstQty, 3)}</td>
+                                                                <td className="metric-cell fcst group-total month-start">{formatQty(t.fcstQty, 3)}</td>
                                                                 <td className="metric-cell fcst group-total">{formatAsp(t.fcstAsp)}</td>
                                                                 <td className={`metric-cell fcst group-total ${!showPlanVar ? 'month-separator' : ''}`}>{formatAmt(t.fcstAmt, 2)}</td>
                                                                 {showPlanVar && (
@@ -441,12 +441,21 @@ export default function ForecastGrid({
                                                         const fcstQtyCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'fcstQty'));
                                                         const fcstAspCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'fcstAsp'));
                                                         const fcstAmtCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'fcstAmt'));
+                                                        const planQtyCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'planQty'));
+                                                        const planAspCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'planAsp'));
+                                                        const planAmtCellKey = buildForecastCellKey(row.id, buildForecastColumnKey(m, 'planAmt'));
                                                         const fcstQtyLockOwner = getCellLockOwner(fcstQtyCellKey);
                                                         const fcstAspLockOwner = getCellLockOwner(fcstAspCellKey);
                                                         const fcstAmtLockOwner = getCellLockOwner(fcstAmtCellKey);
+                                                        const planQtyLockOwner = getCellLockOwner(planQtyCellKey);
+                                                        const planAspLockOwner = getCellLockOwner(planAspCellKey);
+                                                        const planAmtLockOwner = getCellLockOwner(planAmtCellKey);
                                                         const fcstQtyFocus = getRemoteFocus(fcstQtyCellKey);
                                                         const fcstAspFocus = getRemoteFocus(fcstAspCellKey);
                                                         const fcstAmtFocus = getRemoteFocus(fcstAmtCellKey);
+                                                        const planQtyFocus = getRemoteFocus(planQtyCellKey);
+                                                        const planAspFocus = getRemoteFocus(planAspCellKey);
+                                                        const planAmtFocus = getRemoteFocus(planAmtCellKey);
                                                         
                                                         const fcstQty = mData.fcstQty ?? 0;
                                                         const fcstAsp = mData.fcstAsp ?? 0;
@@ -462,7 +471,7 @@ export default function ForecastGrid({
                                                         return (
                                                             <React.Fragment key={m}>
                                                                 {renderEditableCell({
-                                                                    className: `metric-cell fcst edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(fcstQtyCellKey, currentClientId) ? 'locked-remote' : ''}`,
+                                                                    className: `metric-cell fcst edit-cell month-start ${isLocked ? 'locked' : ''} ${isCellLocked(fcstQtyCellKey, currentClientId) ? 'locked-remote' : ''}`,
                                                                     style: fcstQtyFocus ? { boxShadow: `inset 0 0 0 2px ${fcstQtyFocus.color}` } : undefined,
                                                                     title: fcstQtyLockOwner && fcstQtyLockOwner.clientId !== currentClientId ? `Locked by ${fcstQtyLockOwner.userName}` : undefined,
                                                                     value: fcstQty,
@@ -515,9 +524,57 @@ export default function ForecastGrid({
                                                                 
                                                                 {showPlanVar && (
                                                                     <>
-                                                                        <td className={`metric-cell plan ${isLocked ? 'locked' : ''}`}>{formatQty(planQty)}</td>
-                                                                        <td className={`metric-cell plan ${isLocked ? 'locked' : ''}`}>{formatAsp(planAsp)}</td>
-                                                                        <td className={`metric-cell plan ${isLocked ? 'locked' : ''}`}>{formatAmt(planAmt, 2)}</td>
+                                                                        {renderEditableCell({
+                                                                            className: `metric-cell plan edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(planQtyCellKey, currentClientId) ? 'locked-remote' : ''}`,
+                                                                            style: planQtyFocus ? { boxShadow: `inset 0 0 0 2px ${planQtyFocus.color}` } : undefined,
+                                                                            title: planQtyLockOwner && planQtyLockOwner.clientId !== currentClientId ? `Locked by ${planQtyLockOwner.userName}` : undefined,
+                                                                            value: planQty,
+                                                                            step: 'any',
+                                                                            displayValue: formatQty(planQty),
+                                                                            canEdit: canEditForecast && !isLocked && !isCellLocked(planQtyCellKey, currentClientId),
+                                                                            onFocus: () => {
+                                                                                void onCellFocus(row.id, m, 'planQty');
+                                                                                void onCellEditStart(row.id, m, 'planQty');
+                                                                            },
+                                                                            onBlur: () => { void onCellBlur(row.id, m, 'planQty'); },
+                                                                            onCommit: (value) => {
+                                                                                onCellEdit(row.id, originalIdx, m, 'planQty', value);
+                                                                            },
+                                                                        })}
+                                                                        {renderEditableCell({
+                                                                            className: `metric-cell plan edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(planAspCellKey, currentClientId) ? 'locked-remote' : ''}`,
+                                                                            style: planAspFocus ? { boxShadow: `inset 0 0 0 2px ${planAspFocus.color}` } : undefined,
+                                                                            title: planAspLockOwner && planAspLockOwner.clientId !== currentClientId ? `Locked by ${planAspLockOwner.userName}` : undefined,
+                                                                            value: planAsp,
+                                                                            step: '0.01',
+                                                                            displayValue: formatAsp(planAsp),
+                                                                            canEdit: canEditForecast && !isLocked && !isCellLocked(planAspCellKey, currentClientId),
+                                                                            onFocus: () => {
+                                                                                void onCellFocus(row.id, m, 'planAsp');
+                                                                                void onCellEditStart(row.id, m, 'planAsp');
+                                                                            },
+                                                                            onBlur: () => { void onCellBlur(row.id, m, 'planAsp'); },
+                                                                            onCommit: (value) => {
+                                                                                onCellEdit(row.id, originalIdx, m, 'planAsp', value);
+                                                                            },
+                                                                        })}
+                                                                        {renderEditableCell({
+                                                                            className: `metric-cell plan edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(planAmtCellKey, currentClientId) ? 'locked-remote' : ''}`,
+                                                                            style: planAmtFocus ? { boxShadow: `inset 0 0 0 2px ${planAmtFocus.color}` } : undefined,
+                                                                            title: planAmtLockOwner && planAmtLockOwner.clientId !== currentClientId ? `Locked by ${planAmtLockOwner.userName}` : undefined,
+                                                                            value: planAmt,
+                                                                            step: '0.01',
+                                                                            displayValue: formatAmt(planAmt, 2),
+                                                                            canEdit: canEditForecast && !isLocked && !isCellLocked(planAmtCellKey, currentClientId),
+                                                                            onFocus: () => {
+                                                                                void onCellFocus(row.id, m, 'planAmt');
+                                                                                void onCellEditStart(row.id, m, 'planAmt');
+                                                                            },
+                                                                            onBlur: () => { void onCellBlur(row.id, m, 'planAmt'); },
+                                                                            onCommit: (value) => {
+                                                                                onCellEdit(row.id, originalIdx, m, 'planAmt', value);
+                                                                            },
+                                                                        })}
                                                                         
                                                                         <td className={`metric-cell var mid-metric ${varQty > 0 ? 'pos' : varQty < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{formatQty(varQty, 3)}</td>
                                                                         <td className={`metric-cell var mid-metric ${varAsp > 0 ? 'pos' : varAsp < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{formatAsp(varAsp)}</td>
@@ -546,7 +603,7 @@ export default function ForecastGrid({
                                 const showPlanVar = monthSpecificPlanVar[m] ?? globalPlanVarVisible;
                                 return (
                                     <React.Fragment key={m}>
-                                        <td className="metric-cell fcst total">{formatQty(t.fcstQty, 3)}</td>
+                                        <td className="metric-cell fcst total month-start">{formatQty(t.fcstQty, 3)}</td>
                                         <td className="metric-cell fcst total">{formatAsp(t.fcstAsp)}</td>
                                         <td className={`metric-cell fcst total ${!showPlanVar ? 'month-separator' : ''}`}>{formatAmt(t.fcstAmt, 2)}</td>
                                         {showPlanVar && (
