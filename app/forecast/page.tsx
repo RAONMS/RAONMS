@@ -8,15 +8,11 @@ import ProductSettings from '@/components/ProductSettings';
 import { useHeaderActions } from '@/lib/HeaderActionsContext';
 import { useForecastDatabase } from '@/hooks/useForecastDatabase';
 import { useForecastRealtime } from '@/hooks/useForecastRealtime';
-import { useForecastPresence } from '@/hooks/useForecastPresence';
-import { useForecastBroadcast } from '@/hooks/useForecastBroadcast';
 import {
-    buildForecastCellKey,
-    buildForecastColumnKey,
     DEFAULT_FORECAST_ID,
     getForecastTimeline,
-    getForecastUserColor,
 } from '@/lib/forecast';
+import { isForecastEditor } from '@/lib/forecastPermissions';
 
 interface GroupNode {
     id: string;
@@ -139,62 +135,16 @@ export default function ForecastPage() {
     }, [refresh]);
 
     const { channel, connectionStatus } = useForecastRealtime(forecastId, clientId, handleRealtimeRefresh);
-    const collaborationUser = useMemo(() => {
-        if (!currentUser) return null;
-        return {
-            clientId,
-            userId: currentUser.id,
-            name: currentUser.displayName,
-            color: getForecastUserColor(currentUser.id),
-        };
-    }, [clientId, currentUser]);
-    const { activeUsers, focusedCellsByUser } = useForecastPresence({
-        channel,
-        currentUser: collaborationUser,
-        connectionStatus,
-        focusedCellKey,
-        editingCellKey,
-    });
-    const {
-        locksByCell,
-        statusMessage,
-        requestLock,
-        releaseLock,
-        releaseAllOwnedLocks,
-        isCellLocked,
-        getCellLockOwner,
-        broadcastCellFocus,
-        broadcastCellBlur,
-        broadcastEditStart,
-        broadcastEditEnd,
-        broadcastCellValueChange,
-    } = useForecastBroadcast({
-        channel,
-        currentUser: collaborationUser,
-        onRemoteCellValueChange: ({ rowId, month, field, value }) => {
-            setForecastData((prev) => {
-                const next = [...prev];
-                const rowIndex = next.findIndex((row) => row.id === rowId);
-                if (rowIndex === -1) return prev;
-
-                const row = { ...next[rowIndex] };
-                row.data = { ...row.data };
-                row.data[month] = { ...row.data[month], [field]: value };
-                next[rowIndex] = row;
-                return next;
-            });
-        },
-    });
+    const canEditForecast = useMemo(
+        () => isForecastEditor(currentUser?.email),
+        [currentUser?.email]
+    );
 
     const handleSave = async () => {
+        if (!canEditForecast) return;
         try {
             await saveForecastData(forecastData as any);
             setHasPendingChanges(false);
-            if (editingCellKey) {
-                await releaseLock(editingCellKey);
-                await broadcastEditEnd(editingCellKey);
-                setEditingCellKey(null);
-            }
             alert('Changes saved successfully!');
         } catch (error) {
             console.error('Save error:', error);
@@ -203,6 +153,7 @@ export default function ForecastPage() {
     };
 
     const handleCellEdit = (rowId: string, rowIndex: number, month: string, field: string, value: number) => {
+        if (!canEditForecast) return;
         setForecastData(prev => {
             const next = [...prev];
             const row = { ...next[rowIndex] };
@@ -212,48 +163,15 @@ export default function ForecastPage() {
             return next;
         });
         setHasPendingChanges(true);
-        void broadcastCellValueChange(rowId, month, field, value);
     };
 
-    const handleCellFocus = useCallback(async (rowId: string, month: string, field: string) => {
-        const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));
-        setFocusedCellKey(cellKey);
-        await broadcastCellFocus(cellKey);
-    }, [broadcastCellFocus]);
+    const handleCellFocus = useCallback(async () => {}, []);
 
-    const handleCellBlur = useCallback(async (rowId: string, month: string, field: string) => {
-        const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));
-        if (editingCellKey === cellKey) {
-            await broadcastEditEnd(cellKey);
-            await releaseLock(cellKey);
-            setEditingCellKey(null);
-        }
-        setFocusedCellKey((prev) => (prev === cellKey ? null : prev));
-        await broadcastCellBlur(cellKey);
-    }, [broadcastCellBlur, broadcastEditEnd, editingCellKey, releaseLock]);
+    const handleCellBlur = useCallback(async () => {}, []);
 
-    const handleCellEditStart = useCallback(async (rowId: string, month: string, field: string) => {
-        const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));
-        if (editingCellKey === cellKey) {
-            return true;
-        }
+    const handleCellEditStart = useCallback(async () => canEditForecast, [canEditForecast]);
 
-        const locked = await requestLock(cellKey);
-        if (!locked) {
-            return false;
-        }
-
-        setEditingCellKey(cellKey);
-        await broadcastEditStart(cellKey);
-        return true;
-    }, [broadcastEditStart, editingCellKey, requestLock]);
-
-    const handleCellEditEnd = useCallback(async (rowId: string, month: string, field: string) => {
-        const cellKey = buildForecastCellKey(rowId, buildForecastColumnKey(month, field as any));
-        await broadcastEditEnd(cellKey);
-        await releaseLock(cellKey);
-        setEditingCellKey((prev) => (prev === cellKey ? null : prev));
-    }, [broadcastEditEnd, releaseLock]);
+    const handleCellEditEnd = useCallback(async () => {}, []);
 
     const handleToggleColumn = useCallback((col: 'standard' | 'application' | 'location') => {
         setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
@@ -312,7 +230,7 @@ export default function ForecastPage() {
         if (activeTab === 'grid') {
             setActions(
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    {hasPendingChanges && (
+                    {canEditForecast && hasPendingChanges && (
                         <button className="btn btn-primary save-btn" onClick={handleSave} disabled={isSaving}>
                             {isSaving ? 'Saving...' : 'Save Changes'}
                         </button>
@@ -326,22 +244,26 @@ export default function ForecastPage() {
                     <button className="btn btn-secondary" onClick={showAllColumns}>
                         Show All Columns
                     </button>
-                    <button className="btn btn-secondary" onClick={() => importFileInputRef.current?.click()} disabled={isImportingLegacy}>
-                        {isImportingLegacy ? 'Importing...' : 'Upload Forecast CSV'}
-                    </button>
-                    <button className="btn btn-primary" onClick={() => setIsNewEntryOpen(true)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
-                            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                        New Entry
-                    </button>
+                    {canEditForecast && (
+                        <button className="btn btn-secondary" onClick={() => importFileInputRef.current?.click()} disabled={isImportingLegacy}>
+                            {isImportingLegacy ? 'Importing...' : 'Upload Forecast CSV'}
+                        </button>
+                    )}
+                    {canEditForecast && (
+                        <button className="btn btn-primary" onClick={() => setIsNewEntryOpen(true)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            New Entry
+                        </button>
+                    )}
                 </div>
             );
         } else {
             setActions(null);
         }
         return () => setActions(null);
-    }, [activeTab, setActions, showAllColumns, revealAllMonths, globalPlanVarVisible, handleGlobalPlanVarToggle, hasPendingChanges, isSaving, forecastData, handleImportLegacyForecast, isImportingLegacy]);
+    }, [activeTab, canEditForecast, setActions, showAllColumns, revealAllMonths, globalPlanVarVisible, handleGlobalPlanVarToggle, hasPendingChanges, isSaving, forecastData, handleImportLegacyForecast, isImportingLegacy]);
 
     const uniqueModels = useMemo(() => {
         const models = Array.from(new Set(forecastData.map(d => d.model))).sort();
@@ -436,43 +358,16 @@ export default function ForecastPage() {
         };
     }, [forecastId, hierarchy, hierarchyCloudHydrated]);
 
-    useEffect(() => {
-        return () => {
-            void releaseAllOwnedLocks();
-        };
-    }, [releaseAllOwnedLocks]);
-
-    useEffect(() => {
-        if (!editingCellKey) return;
-
-        const intervalId = window.setInterval(() => {
-            void requestLock(editingCellKey);
-        }, 5000);
-
-        return () => {
-            window.clearInterval(intervalId);
-        };
-    }, [editingCellKey, requestLock]);
-
     return (
         <div className="page-container">
             <div className={`tabs-container${activeTab === 'grid' ? ' sticky-tabs' : ''}`}>
                 <div className="live-strip">
                     <div className="viewer-cluster">
                         <span className="live-pill">Live Forecast {forecastId}</span>
-                        <span className="viewer-count">{activeUsers.length} viewer{activeUsers.length === 1 ? '' : 's'}</span>
-                        <div className="viewer-list">
-                            {activeUsers.map((user) => (
-                                <span key={user.clientId} className="viewer-badge" style={{ borderColor: user.color }}>
-                                    <span className="viewer-dot" style={{ background: user.color }} />
-                                    {user.name}
-                                    {user.isEditing ? ' editing' : ''}
-                                </span>
-                            ))}
-                        </div>
+                        <span className="viewer-count">{canEditForecast ? 'Editor' : 'Viewer'}</span>
                     </div>
                     <div className={`realtime-status status-${connectionStatus.toLowerCase()}`}>
-                        {connectionStatus === 'SUBSCRIBED' ? 'Live sync connected' : `Realtime ${connectionStatus.toLowerCase()}`}
+                        {connectionStatus === 'SUBSCRIBED' ? 'Updates appear after save' : `Realtime ${connectionStatus.toLowerCase()}`}
                     </div>
                 </div>
                 <div className="tabs">
@@ -519,12 +414,13 @@ export default function ForecastPage() {
                                     onToggleLock={toggleMonthLock}
                                     onToggleMonthVisibility={toggleMonthVisibility}
                                     onToggleMonthPlanVar={toggleMonthPlanVar}
+                                    canEditForecast={canEditForecast}
                                     onCellEdit={handleCellEdit}
-                                    focusedCellsByUser={focusedCellsByUser}
-                                    locksByCell={locksByCell}
+                                    focusedCellsByUser={{}}
+                                    locksByCell={{}}
                                     currentClientId={clientId}
-                                    isCellLocked={isCellLocked}
-                                    getCellLockOwner={getCellLockOwner}
+                                    isCellLocked={() => false}
+                                    getCellLockOwner={() => null}
                                     onCellFocus={handleCellFocus}
                                     onCellBlur={handleCellBlur}
                                     onCellEditStart={handleCellEditStart}
@@ -532,9 +428,9 @@ export default function ForecastPage() {
                                 />
                             </div>
                         )}
-                        {(statusMessage || error) && (
+                        {error && (
                             <div className="forecast-status-message">
-                                {statusMessage || error}
+                                {error}
                             </div>
                         )}
                     </div>
@@ -554,7 +450,7 @@ export default function ForecastPage() {
                 )}
             </main>
 
-            {isNewEntryOpen && (
+            {canEditForecast && isNewEntryOpen && (
                 <NewForecastEntry 
                     onClose={() => setIsNewEntryOpen(false)} 
                     onSuccess={() => {

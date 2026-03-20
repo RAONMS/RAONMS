@@ -28,6 +28,7 @@ interface ForecastGridProps {
     onToggleLock: (month: string) => void;
     onToggleMonthVisibility: (month: string) => void;
     onToggleMonthPlanVar: (month: string) => void;
+    canEditForecast: boolean;
     onCellEdit: (rowId: string, rowIndex: number, month: string, field: string, value: number) => void;
     focusedCellsByUser: Record<string, ForecastPresenceUser>;
     locksByCell: Record<string, ForecastCellLock>;
@@ -58,6 +59,7 @@ export default function ForecastGrid({
     onToggleLock,
     onToggleMonthVisibility,
     onToggleMonthPlanVar,
+    canEditForecast,
     onCellEdit,
     focusedCellsByUser,
     locksByCell,
@@ -191,10 +193,10 @@ export default function ForecastGrid({
                                         <div className="month-header-content">
                                             <span className="month-label">{formatMonth(m)}</span>
                                             <div className="month-controls">
-                                                <button className="ctrl-btn" onClick={() => onToggleLock(m)}>
+                                                <button className="ctrl-btn" onClick={() => onToggleLock(m)} disabled={!canEditForecast}>
                                                     {lockedMonths.has(m) ? 'Unlock' : 'Lock'}
                                                 </button>
-                                                <button className="ctrl-btn" onClick={() => onToggleMonthPlanVar(m)}>
+                                                <button className="ctrl-btn" onClick={() => onToggleMonthPlanVar(m)} disabled={!canEditForecast}>
                                                     {showPlanVar ? 'Hide PV' : 'Show PV'}
                                                 </button>
                                                 <button className="ctrl-btn hide-month-btn" onClick={() => onToggleMonthVisibility(m)}>
@@ -411,7 +413,7 @@ export default function ForecastGrid({
                                                                     style={fcstQtyFocus ? { boxShadow: `inset 0 0 0 2px ${fcstQtyFocus.color}` } : undefined}
                                                                     title={fcstQtyLockOwner && fcstQtyLockOwner.clientId !== currentClientId ? `Locked by ${fcstQtyLockOwner.userName}` : undefined}
                                                                 >
-                                                                    {isLocked ? formatQty(fcstQty) : (
+                                                                    {isLocked || !canEditForecast ? formatQty(fcstQty) : (
                                                                         <input 
                                                                             type="number" 
                                                                             step="any"
@@ -434,7 +436,7 @@ export default function ForecastGrid({
                                                                     style={fcstAspFocus ? { boxShadow: `inset 0 0 0 2px ${fcstAspFocus.color}` } : undefined}
                                                                     title={fcstAspLockOwner && fcstAspLockOwner.clientId !== currentClientId ? `Locked by ${fcstAspLockOwner.userName}` : undefined}
                                                                 >
-                                                                    {isLocked ? formatAsp(fcstAsp) : (
+                                                                    {isLocked || !canEditForecast ? formatAsp(fcstAsp) : (
                                                                         <input 
                                                                             type="number" 
                                                                             step="0.01"
@@ -457,7 +459,7 @@ export default function ForecastGrid({
                                                                     style={fcstAmtFocus ? { boxShadow: `inset 0 0 0 2px ${fcstAmtFocus.color}` } : undefined}
                                                                     title={fcstAmtLockOwner && fcstAmtLockOwner.clientId !== currentClientId ? `Locked by ${fcstAmtLockOwner.userName}` : undefined}
                                                                 >
-                                                                    {isLocked ? formatAmt(fcstAmt) : (
+                                                                    {isLocked || !canEditForecast ? formatAmt(fcstAmt) : (
                                                                         <input 
                                                                             type="number" 
                                                                             step="0.01"
