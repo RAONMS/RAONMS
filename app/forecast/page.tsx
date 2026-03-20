@@ -99,6 +99,7 @@ export default function ForecastPage() {
     const [hiddenMonths, setHiddenMonths] = useState<Set<string>>(new Set());
     const [monthSpecificPlanVar, setMonthSpecificPlanVar] = useState<Record<string, boolean>>({});
     const [hierarchyCloudHydrated, setHierarchyCloudHydrated] = useState(false);
+    const forecastDataRef = useRef<any[]>([]);
 
     // Dynamic Timeline: Current Year + Next Year (24 months)
     const timeline = useMemo(() => getForecastTimeline(), []);
@@ -143,7 +144,11 @@ export default function ForecastPage() {
     const handleSave = async () => {
         if (!canEditForecast) return;
         try {
-            await saveForecastData(forecastData as any);
+            if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+            }
+            await new Promise((resolve) => window.setTimeout(resolve, 0));
+            await saveForecastData(forecastDataRef.current as any);
             setHasPendingChanges(false);
             alert('Changes saved successfully!');
         } catch (error) {
@@ -160,10 +165,15 @@ export default function ForecastPage() {
             row.data = { ...row.data };
             row.data[month] = { ...row.data[month], [field]: value };
             next[rowIndex] = row;
+            forecastDataRef.current = next;
             return next;
         });
         setHasPendingChanges(true);
     };
+
+    useEffect(() => {
+        forecastDataRef.current = forecastData;
+    }, [forecastData]);
 
     const handleCellFocus = useCallback(async () => {}, []);
 
@@ -239,7 +249,7 @@ export default function ForecastPage() {
                         Reveal All Months
                     </button>
                     <button className="btn btn-secondary" onClick={handleGlobalPlanVarToggle}>
-                        {globalPlanVarVisible ? 'Hide' : 'Show'} PLAN/VAR
+                        Toggle PLAN/VAR
                     </button>
                     <button className="btn btn-secondary" onClick={showAllColumns}>
                         Show All Columns
@@ -553,10 +563,10 @@ export default function ForecastPage() {
                     to { opacity: 1; transform: translateY(0); }
                 }
                 .btn-secondary {
-                    background: #f8fafc !important;
-                    color: #334155 !important;
-                    border: 1px solid #94a3b8 !important;
-                    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+                    background: #ffffff !important;
+                    color: #5b21b6 !important;
+                    border: 1px solid #8b5cf6 !important;
+                    box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.08);
                     font-size: 13px;
                     padding: 8px 16px;
                     font-weight: 600;
@@ -565,9 +575,9 @@ export default function ForecastPage() {
                     gap: 6px;
                 }
                 .btn-secondary:hover {
-                    background: #f1f5f9 !important;
-                    border-color: #64748b !important;
-                    color: #0f172a !important;
+                    background: #faf5ff !important;
+                    border-color: #7c3aed !important;
+                    color: #4c1d95 !important;
                 }
                 .btn-primary {
                     display: flex;

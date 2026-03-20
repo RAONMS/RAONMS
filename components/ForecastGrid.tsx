@@ -47,6 +47,81 @@ function formatMonth(ym: string) {
     return date.toLocaleString('default', { month: 'short', year: '2-digit' });
 }
 
+interface EditableMetricCellProps {
+    className: string;
+    style?: React.CSSProperties;
+    title?: string;
+    value: number;
+    step: string;
+    displayValue: string;
+    canEdit: boolean;
+    onCommit: (value: number) => void;
+    onFocus: () => void;
+    onBlur: () => void;
+}
+
+const EditableMetricCell = React.memo(function EditableMetricCell({
+    className,
+    style,
+    title,
+    value,
+    step,
+    displayValue,
+    canEdit,
+    onCommit,
+    onFocus,
+    onBlur,
+}: EditableMetricCellProps) {
+    const [draftValue, setDraftValue] = useState(value === 0 ? '' : String(value));
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) {
+            setDraftValue(value === 0 ? '' : String(value));
+        }
+    }, [value, isFocused]);
+
+    const commitValue = () => {
+        onCommit(parseFloat(draftValue) || 0);
+    };
+
+    return (
+        <td className={className} style={style} title={title}>
+            {!canEdit ? (
+                displayValue
+            ) : (
+                <input
+                    type="number"
+                    step={step}
+                    value={draftValue}
+                    onFocus={() => {
+                        setIsFocused(true);
+                        onFocus();
+                    }}
+                    onBlur={() => {
+                        setIsFocused(false);
+                        commitValue();
+                        onBlur();
+                    }}
+                    onChange={(e) => {
+                        setDraftValue(e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                        if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                        if (e.key === 'Enter') {
+                            (e.currentTarget as HTMLInputElement).blur();
+                        }
+                        if (e.key === 'Escape') {
+                            setDraftValue(value === 0 ? '' : String(value));
+                            (e.currentTarget as HTMLInputElement).blur();
+                        }
+                    }}
+                />
+            )}
+        </td>
+    );
+});
+
 export default function ForecastGrid({ 
     data, 
     timeline,
@@ -408,75 +483,57 @@ export default function ForecastGrid({
 
                                                         return (
                                                             <React.Fragment key={m}>
-                                                                <td
+                                                                <EditableMetricCell
                                                                     className={`metric-cell fcst edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(fcstQtyCellKey, currentClientId) ? 'locked-remote' : ''}`}
                                                                     style={fcstQtyFocus ? { boxShadow: `inset 0 0 0 2px ${fcstQtyFocus.color}` } : undefined}
                                                                     title={fcstQtyLockOwner && fcstQtyLockOwner.clientId !== currentClientId ? `Locked by ${fcstQtyLockOwner.userName}` : undefined}
-                                                                >
-                                                                    {isLocked || !canEditForecast ? formatQty(fcstQty) : (
-                                                                        <input 
-                                                                            type="number" 
-                                                                            step="any"
-                                                                            value={fcstQty === 0 ? '' : fcstQty} 
-                                                                            disabled={isCellLocked(fcstQtyCellKey, currentClientId)}
-                                                                            onFocus={() => {
-                                                                                void onCellFocus(row.id, m, 'fcstQty');
-                                                                                void onCellEditStart(row.id, m, 'fcstQty');
-                                                                            }}
-                                                                            onBlur={() => { void onCellBlur(row.id, m, 'fcstQty'); }}
-                                                                            onChange={(e) => {
-                                                                                onCellEdit(row.id, originalIdx, m, 'fcstQty', parseFloat(e.target.value) || 0);
-                                                                            }}
-                                                                            onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
-                                                                        />
-                                                                    )}
-                                                                </td>
-                                                                <td
+                                                                    value={fcstQty}
+                                                                    step="any"
+                                                                    displayValue={formatQty(fcstQty)}
+                                                                    canEdit={canEditForecast && !isLocked && !isCellLocked(fcstQtyCellKey, currentClientId)}
+                                                                    onFocus={() => {
+                                                                        void onCellFocus(row.id, m, 'fcstQty');
+                                                                        void onCellEditStart(row.id, m, 'fcstQty');
+                                                                    }}
+                                                                    onBlur={() => { void onCellBlur(row.id, m, 'fcstQty'); }}
+                                                                    onCommit={(value) => {
+                                                                        onCellEdit(row.id, originalIdx, m, 'fcstQty', value);
+                                                                    }}
+                                                                />
+                                                                <EditableMetricCell
                                                                     className={`metric-cell fcst edit-cell ${isLocked ? 'locked' : ''} ${isCellLocked(fcstAspCellKey, currentClientId) ? 'locked-remote' : ''}`}
                                                                     style={fcstAspFocus ? { boxShadow: `inset 0 0 0 2px ${fcstAspFocus.color}` } : undefined}
                                                                     title={fcstAspLockOwner && fcstAspLockOwner.clientId !== currentClientId ? `Locked by ${fcstAspLockOwner.userName}` : undefined}
-                                                                >
-                                                                    {isLocked || !canEditForecast ? formatAsp(fcstAsp) : (
-                                                                        <input 
-                                                                            type="number" 
-                                                                            step="0.01"
-                                                                            value={fcstAsp === 0 ? '' : fcstAsp} 
-                                                                            disabled={isCellLocked(fcstAspCellKey, currentClientId)}
-                                                                            onFocus={() => {
-                                                                                void onCellFocus(row.id, m, 'fcstAsp');
-                                                                                void onCellEditStart(row.id, m, 'fcstAsp');
-                                                                            }}
-                                                                            onBlur={() => { void onCellBlur(row.id, m, 'fcstAsp'); }}
-                                                                            onChange={(e) => {
-                                                                                onCellEdit(row.id, originalIdx, m, 'fcstAsp', parseFloat(e.target.value) || 0);
-                                                                            }}
-                                                                            onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
-                                                                        />
-                                                                    )}
-                                                                </td>
-                                                                <td
+                                                                    value={fcstAsp}
+                                                                    step="0.01"
+                                                                    displayValue={formatAsp(fcstAsp)}
+                                                                    canEdit={canEditForecast && !isLocked && !isCellLocked(fcstAspCellKey, currentClientId)}
+                                                                    onFocus={() => {
+                                                                        void onCellFocus(row.id, m, 'fcstAsp');
+                                                                        void onCellEditStart(row.id, m, 'fcstAsp');
+                                                                    }}
+                                                                    onBlur={() => { void onCellBlur(row.id, m, 'fcstAsp'); }}
+                                                                    onCommit={(value) => {
+                                                                        onCellEdit(row.id, originalIdx, m, 'fcstAsp', value);
+                                                                    }}
+                                                                />
+                                                                <EditableMetricCell
                                                                     className={`metric-cell fcst edit-cell ${isLocked ? 'locked' : ''} ${!showPlanVar ? 'month-separator' : ''} ${isCellLocked(fcstAmtCellKey, currentClientId) ? 'locked-remote' : ''}`}
                                                                     style={fcstAmtFocus ? { boxShadow: `inset 0 0 0 2px ${fcstAmtFocus.color}` } : undefined}
                                                                     title={fcstAmtLockOwner && fcstAmtLockOwner.clientId !== currentClientId ? `Locked by ${fcstAmtLockOwner.userName}` : undefined}
-                                                                >
-                                                                    {isLocked || !canEditForecast ? formatAmt(fcstAmt) : (
-                                                                        <input 
-                                                                            type="number" 
-                                                                            step="0.01"
-                                                                            value={fcstAmt === 0 ? '' : fcstAmt} 
-                                                                            disabled={isCellLocked(fcstAmtCellKey, currentClientId)}
-                                                                            onFocus={() => {
-                                                                                void onCellFocus(row.id, m, 'fcstAmt');
-                                                                                void onCellEditStart(row.id, m, 'fcstAmt');
-                                                                            }}
-                                                                            onBlur={() => { void onCellBlur(row.id, m, 'fcstAmt'); }}
-                                                                            onChange={(e) => {
-                                                                                onCellEdit(row.id, originalIdx, m, 'fcstAmt', parseFloat(e.target.value) || 0);
-                                                                            }}
-                                                                            onKeyDown={(e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); }}
-                                                                        />
-                                                                    )}
-                                                                </td>
+                                                                    value={fcstAmt}
+                                                                    step="0.01"
+                                                                    displayValue={formatAmt(fcstAmt)}
+                                                                    canEdit={canEditForecast && !isLocked && !isCellLocked(fcstAmtCellKey, currentClientId)}
+                                                                    onFocus={() => {
+                                                                        void onCellFocus(row.id, m, 'fcstAmt');
+                                                                        void onCellEditStart(row.id, m, 'fcstAmt');
+                                                                    }}
+                                                                    onBlur={() => { void onCellBlur(row.id, m, 'fcstAmt'); }}
+                                                                    onCommit={(value) => {
+                                                                        onCellEdit(row.id, originalIdx, m, 'fcstAmt', value);
+                                                                    }}
+                                                                />
                                                                 
                                                                 {showPlanVar && (
                                                                     <>
@@ -554,8 +611,8 @@ export default function ForecastGrid({
                 }
                 .forecast-table th, .forecast-table td {
                     padding: 4px 6px;
-                    border-right: 1px solid var(--color-border-light);
-                    border-bottom: 1px solid var(--color-border-light);
+                    border-right: 1px solid #cbd5e1;
+                    border-bottom: 1px solid #cbd5e1;
                     white-space: nowrap;
                     height: 32px;
                     overflow: hidden;
@@ -589,11 +646,11 @@ export default function ForecastGrid({
 
                 /* Separator Logic */
                 .month-separator {
-                    border-right: 1.5px solid #94a3b8 !important;
+                    border-right: 1.5px solid #64748b !important;
                 }
                 
                 .id-border {
-                    border-right: 1.5px solid #64748b !important;
+                    border-right: 1.5px solid #475569 !important;
                 }
 
                 .id-col, .id-header {
@@ -680,22 +737,22 @@ export default function ForecastGrid({
 
                 /* Explicit Width for Metrics (Excel size 8 ~70px) */
                 .metric-header {
-                    font-size: 8px;
+                    font-size: 9px;
                     font-weight: 700;
                     text-align: right;
                     background: #ffffff;
                     color: var(--color-text-light);
-                    width: 70px;
-                    min-width: 70px;
+                    width: 58px;
+                    min-width: 58px;
                 }
                 .metric-header.mid-metric { border-right: 1px solid var(--color-border-light); }
 
                 .metric-cell {
                     text-align: right;
                     font-family: 'Inter', monospace;
-                    font-size: 10px;
-                    width: 70px;
-                    min-width: 70px;
+                    font-size: 12px;
+                    width: 58px;
+                    min-width: 58px;
                 }
                 .metric-cell.fcst {
                     color: var(--color-primary);
@@ -727,13 +784,13 @@ export default function ForecastGrid({
                     transition: all 0.1s;
                 }
                 .metric-cell.edit-cell input:hover {
-                    background: #f8fafc;
-                    border-color: #e2e8f0;
+                    background: #ffffff;
+                    border-color: #94a3b8;
                 }
                 .metric-cell.edit-cell input:focus {
                     background: white;
-                    border-color: var(--color-primary);
-                    box-shadow: inset 0 0 0 1px var(--color-primary);
+                    border-color: #7c3aed;
+                    box-shadow: inset 0 0 0 1px #7c3aed;
                 }
                 /* Hide arrows on number inputs */
                 input::-webkit-outer-spin-button,
