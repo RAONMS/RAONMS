@@ -70,41 +70,82 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No legacy forecast rows were found.' }, { status: 404 });
     }
 
-    const entryPayload = rows.map((row) => ({
-      forecast_id: forecastId,
-      model: row.model,
-      customer: row.customer,
-      standard: row.standard,
-      application: row.application,
-      location: row.location,
-      created_by: user.id,
-      updated_by: user.id,
-    }));
+    const uniqueImportedEntries = Array.from(
+      new Map(
+        rows.map((row) => {
+          const key = `${row.model}|${row.customer}|${row.standard}|${row.application}|${row.location}`;
+          return [
+            key,
+            {
+              forecast_id: forecastId,
+              model: row.model,
+              customer: row.customer,
+              standard: row.standard,
+              application: row.application,
+              location: row.location,
+              created_by: user.id,
+              updated_by: user.id,
+            },
+          ];
+        })
+      ).entries()
+    );
 
-    const { error: deleteValuesError } = await supabase
-      .from('forecast_month_values')
-      .delete()
-      .eq('forecast_id', forecastId);
-    if (deleteValuesError) throw deleteValuesError;
-
-    const { error: deleteEntriesError } = await supabase
+    const { data: existingEntries, error: existingEntriesError } = await supabase
       .from('forecast_entries')
-      .delete()
+      .select('id, model, customer, standard, application, location')
       .eq('forecast_id', forecastId);
-    if (deleteEntriesError) throw deleteEntriesError;
+    if (existingEntriesError) throw existingEntriesError;
 
-    const { data: insertedEntries, error: insertEntriesError } = await supabase
-      .from('forecast_entries')
-      .insert(entryPayload)
-      .select('id, model, customer, standard, application, location');
-    if (insertEntriesError) throw insertEntriesError;
-
-    const entryIdByKey = new Map(
-      (insertedEntries || []).map((entry) => [
+    const existingEntryIdByKey = new Map(
+      (existingEntries || []).map((entry) => [
         `${entry.model}|${entry.customer}|${entry.standard}|${entry.application}|${entry.location}`,
         entry.id,
       ])
     );
+
+    const newEntryPayload = uniqueImportedEntries
+      .filter(([key]) => !existingEntryIdByKey.has(key))
+      .map(([, payload]) => payload);
+
+    let insertedEntries: Array<{
+      id: string;
+      model: string;
+      customer: string;
+      standard: string;
+      application: string;
+      location: string;
+    }> = [];
+
+    if (newEntryPayload.length > 0) {
+      const { data, error: insertEntriesError } = await supabase
+        .from('forecast_entries')
+        .insert(newEntryPayload)
+        .select('id, model, customer, standard, application, location');
+      if (insertEntriesError) throw insertEntriesError;
+      insertedEntries = data || [];
+    }
+
+    const entryIdByKey = new Map(existingEntryIdByKey);
+    insertedEntries.forEach((entry) => {
+      entryIdByKey.set(
+        `${entry.model}|${entry.customer}|${entry.standard}|${entry.application}|${entry.location}`,
+        entry.id
+      );
+    });
+
+    const importedEntryIds = Array.from(new Set(Array.from(entryIdByKey.entries())
+      .filter(([key]) => uniqueImportedEntries.some(([importedKey]) => importedKey === key))
+      .map(([, id]) => id)));
+
+    if (importedEntryIds.length > 0) {
+      const { error: deleteValuesError } = await supabase
+        .from('forecast_month_values')
+        .delete()
+        .eq('forecast_id', forecastId)
+        .in('entry_id', importedEntryIds);
+      if (deleteValuesError) throw deleteValuesError;
+    }
 
     const monthValuePayload = rows.flatMap((row) => {
       const entryKey = `${row.model}|${row.customer}|${row.standard}|${row.application}|${row.location}`;
@@ -143,6 +184,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       importedEntries: rows.length,
+      insertedEntries: insertedEntries.length,
+      updatedEntries: importedEntryIds.length - insertedEntries.length,
       importedMonthValues: monthValuePayload.length,
     });
   } catch (error: any) {
