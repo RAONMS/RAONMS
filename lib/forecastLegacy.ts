@@ -3,6 +3,21 @@ import path from 'path';
 import Papa from 'papaparse';
 import { ForecastRow } from '@/lib/forecast';
 
+export interface LegacyForecastRecord {
+  Model?: string | number | null;
+  Customer?: string | number | null;
+  Standard?: string | number | null;
+  Application?: string | number | null;
+  Location?: string | number | null;
+  Month?: string | number | null;
+  "FCST_Q'ty"?: string | number | null;
+  FCST_ASP?: string | number | null;
+  FCST_AMT?: string | number | null;
+  "PLAN_Q'ty"?: string | number | null;
+  PLAN_ASP?: string | number | null;
+  PLAN_AMT?: string | number | null;
+}
+
 const MONTH_MAP: Record<string, string> = {
   jan: '01',
   feb: '02',
@@ -64,10 +79,14 @@ export function parseLegacyForecastCsv(csvContent: string, forecastId = 'default
     dynamicTyping: true,
   });
 
+  return parseLegacyForecastRecords(parsed.data as LegacyForecastRecord[], forecastId);
+}
+
+export function parseLegacyForecastRecords(records: LegacyForecastRecord[], forecastId = 'default') {
   const rows: ForecastRow[] = [];
   const seenKeys = new Map<string, number>();
 
-  (parsed.data as Record<string, string | number | null | undefined>[]).forEach((row) => {
+  records.forEach((row) => {
     const model = String(row.Model || '').trim();
     const customer = String(row.Customer || '').trim();
     const standard = String(row.Standard || '').trim();

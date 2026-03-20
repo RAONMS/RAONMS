@@ -13,6 +13,7 @@ import {
     getForecastTimeline,
 } from '@/lib/forecast';
 import { isForecastEditor } from '@/lib/forecastPermissions';
+import { convertForecastWorkbookSheetToLegacyRecords, isForecastWorkbookSheet } from '@/lib/forecastWorkbook';
 
 interface GroupNode {
     id: string;
@@ -204,25 +205,69 @@ export default function ForecastPage() {
     const handleImportLegacyForecast = useCallback(async (file: File) => {
         setIsImportingLegacy(true);
         try {
-            const formData = new FormData();
-            formData.append('forecastId', forecastId);
-            formData.append('file', file);
+            const lowerName = file.name.toLowerCase();
+            let response: Response;
 
-            const res = await fetch('/api/forecast/import', {
-                method: 'POST',
-                body: formData,
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || 'CSV import failed');
+            if (lowerName.endsWith('.csv')) {
+                const formData = new FormData();
+                formData.append('forecastId', forecastId);
+                formData.append('file', file);
+
+                response = await fetch('/api/forecast/import', {
+                    method: 'POST',
+                    body: formData,
+                });
+            } else if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+                const XLSX = await import('xlsx');
+                const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+
+                const matchedSheetName = workbook.SheetNames.find((sheetName) => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const sheetRows = XLSX.utils.sheet_to_json(sheet, {
+                        header: 1,
+                        raw: true,
+                        defval: null,
+                    }) as unknown[][];
+
+                    return isForecastWorkbookSheet(sheetRows);
+                });
+
+                if (!matchedSheetName) {
+                    throw new Error('Could not find a forecast detail sheet in this workbook.');
+                }
+
+                const matchedSheet = workbook.Sheets[matchedSheetName];
+                const sheetRows = XLSX.utils.sheet_to_json(matchedSheet, {
+                    header: 1,
+                    raw: true,
+                    defval: null,
+                }) as unknown[][];
+
+                const normalizedRows = convertForecastWorkbookSheetToLegacyRecords(sheetRows);
+
+                response = await fetch('/api/forecast/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        forecastId,
+                        rows: normalizedRows,
+                    }),
+                });
+            } else {
+                throw new Error('Unsupported file type. Upload a .csv, .xlsx, or .xls forecast file.');
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Forecast import failed');
             }
 
             await refresh();
             setHasPendingChanges(false);
-            alert(`Imported ${data.importedEntries} forecast entries from CSV.`);
+            alert(`Imported ${data.importedEntries} forecast entries from ${file.name}.`);
         } catch (error: any) {
-            console.error('CSV import failed', error);
-            alert(error.message || 'CSV import failed');
+            console.error('Forecast import failed', error);
+            alert(error.message || 'Forecast import failed');
         } finally {
             setIsImportingLegacy(false);
         }
@@ -256,7 +301,7 @@ export default function ForecastPage() {
                     </button>
                     {canEditForecast && (
                         <button className="btn btn-secondary" onClick={() => importFileInputRef.current?.click()} disabled={isImportingLegacy}>
-                            {isImportingLegacy ? 'Importing...' : 'Upload Forecast CSV'}
+                            {isImportingLegacy ? 'Importing...' : 'Upload Forecast File'}
                         </button>
                     )}
                     {canEditForecast && (
@@ -474,7 +519,7 @@ export default function ForecastPage() {
             <input
                 ref={importFileInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 style={{ display: 'none' }}
                 onChange={handleImportFileChange}
             />

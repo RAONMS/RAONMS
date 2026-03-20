@@ -808,9 +808,19 @@ input, textarea, select { font-family: inherit; }
   font-size: 12px !important;
   padding: 3px 4px !important;
   text-overflow: clip !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   white-space: nowrap !important;
   line-height: 1.15 !important;
+}
+
+.forecast-table .metric-value {
+  display: block !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-align: right !important;
+  line-height: 1.1 !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .forecast-table .metric-cell.edit-cell {
@@ -827,6 +837,9 @@ input, textarea, select { font-family: inherit; }
   font: inherit !important;
   text-align: right !important;
   outline: none !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
   appearance: textfield;
   -moz-appearance: textfield;
 }

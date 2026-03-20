@@ -173,6 +173,28 @@ export default function ForecastGrid({
         });
     };
 
+    const getMetricFontSize = (displayValue: string) => {
+        const compactValue = displayValue.replace(/[,\s.]/g, '');
+        const length = compactValue.length;
+
+        if (displayValue === '-' || length <= 4) return 12;
+        if (length === 5) return 10;
+        if (length === 6) return 8.5;
+        if (length === 7) return 7;
+        if (length === 8) return 6.5;
+        if (length >= 9) return 6;
+        return 12;
+    };
+
+    const renderMetricValue = (displayValue: string) => (
+        <span
+            className="metric-value"
+            style={{ fontSize: `${getMetricFontSize(displayValue)}px` }}
+        >
+            {displayValue}
+        </span>
+    );
+
     const getRemoteFocus = (cellKey: string) => {
         return Object.values(focusedCellsByUser).find(
             (user) => user.clientId !== currentClientId && user.focusedCellKey === cellKey
@@ -205,7 +227,7 @@ export default function ForecastGrid({
         if (!canEdit) {
             return (
                 <td className={className} style={style} title={title}>
-                    {displayValue}
+                    {renderMetricValue(displayValue)}
                 </td>
             );
         }
@@ -216,7 +238,14 @@ export default function ForecastGrid({
                     type="number"
                     step={step}
                     defaultValue={value === 0 ? '' : value}
-                    onFocus={onFocus}
+                    style={{ fontSize: `${getMetricFontSize(value === 0 ? '' : String(value))}px` }}
+                    onFocus={(e) => {
+                        e.currentTarget.style.fontSize = `${getMetricFontSize(e.currentTarget.value)}px`;
+                        onFocus();
+                    }}
+                    onInput={(e) => {
+                        e.currentTarget.style.fontSize = `${getMetricFontSize(e.currentTarget.value)}px`;
+                    }}
                     onBlur={(e) => {
                         onCommit(parseFloat(e.currentTarget.value) || 0);
                         onBlur();
@@ -400,17 +429,17 @@ export default function ForecastGrid({
                                                         const showPlanVar = monthSpecificPlanVar[m] ?? globalPlanVarVisible;
                                                         return (
                                                             <React.Fragment key={m}>
-                                                                <td className="metric-cell fcst group-total month-start">{formatQty(t.fcstQty, 3)}</td>
-                                                                <td className="metric-cell fcst group-total">{formatAsp(t.fcstAsp)}</td>
-                                                                <td className={`metric-cell fcst group-total ${!showPlanVar ? 'month-separator' : ''}`}>{formatAmt(t.fcstAmt, 2)}</td>
+                                                                <td className="metric-cell fcst group-total month-start">{renderMetricValue(formatQty(t.fcstQty, 3))}</td>
+                                                                <td className="metric-cell fcst group-total">{renderMetricValue(formatAsp(t.fcstAsp))}</td>
+                                                                <td className={`metric-cell fcst group-total ${!showPlanVar ? 'month-separator' : ''}`}>{renderMetricValue(formatAmt(t.fcstAmt, 2))}</td>
                                                                 {showPlanVar && (
                                                                     <>
-                                                                        <td className="metric-cell plan group-total">{formatQty(t.planQty, 3)}</td>
-                                                                        <td className="metric-cell plan group-total">{formatAsp(t.planAsp)}</td>
-                                                                        <td className="metric-cell plan group-total">{formatAmt(t.planAmt, 2)}</td>
-                                                                        <td className={`metric-cell var group-total mid-metric ${t.varQty > 0 ? 'pos' : t.varQty < 0 ? 'neg' : ''}`}>{formatQty(t.varQty, 3)}</td>
-                                                                        <td className={`metric-cell var group-total mid-metric ${t.varAsp > 0 ? 'pos' : t.varAsp < 0 ? 'neg' : ''}`}>{formatAsp(t.varAsp)}</td>
-                                                                        <td className={`metric-cell var group-total month-separator ${t.varAmt > 0 ? 'pos' : t.varAmt < 0 ? 'neg' : ''}`}>{formatAmt(t.varAmt, 2)}</td>
+                                                                        <td className="metric-cell plan group-total">{renderMetricValue(formatQty(t.planQty, 3))}</td>
+                                                                        <td className="metric-cell plan group-total">{renderMetricValue(formatAsp(t.planAsp))}</td>
+                                                                        <td className="metric-cell plan group-total">{renderMetricValue(formatAmt(t.planAmt, 2))}</td>
+                                                                        <td className={`metric-cell var group-total mid-metric ${t.varQty > 0 ? 'pos' : t.varQty < 0 ? 'neg' : ''}`}>{renderMetricValue(formatQty(t.varQty, 3))}</td>
+                                                                        <td className={`metric-cell var group-total mid-metric ${t.varAsp > 0 ? 'pos' : t.varAsp < 0 ? 'neg' : ''}`}>{renderMetricValue(formatAsp(t.varAsp))}</td>
+                                                                        <td className={`metric-cell var group-total month-separator ${t.varAmt > 0 ? 'pos' : t.varAmt < 0 ? 'neg' : ''}`}>{renderMetricValue(formatAmt(t.varAmt, 2))}</td>
                                                                     </>
                                                                 )}
                                                             </React.Fragment>
@@ -576,9 +605,9 @@ export default function ForecastGrid({
                                                                             },
                                                                         })}
                                                                         
-                                                                        <td className={`metric-cell var mid-metric ${varQty > 0 ? 'pos' : varQty < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{formatQty(varQty, 3)}</td>
-                                                                        <td className={`metric-cell var mid-metric ${varAsp > 0 ? 'pos' : varAsp < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{formatAsp(varAsp)}</td>
-                                                                        <td className={`metric-cell var month-separator ${varAmt > 0 ? 'pos' : varAmt < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{formatAmt(varAmt, 2)}</td>
+                                                                        <td className={`metric-cell var mid-metric ${varQty > 0 ? 'pos' : varQty < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{renderMetricValue(formatQty(varQty, 3))}</td>
+                                                                        <td className={`metric-cell var mid-metric ${varAsp > 0 ? 'pos' : varAsp < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{renderMetricValue(formatAsp(varAsp))}</td>
+                                                                        <td className={`metric-cell var month-separator ${varAmt > 0 ? 'pos' : varAmt < 0 ? 'neg' : ''} ${isLocked ? 'locked' : ''}`}>{renderMetricValue(formatAmt(varAmt, 2))}</td>
                                                                     </>
                                                                 )}
                                                             </React.Fragment>
@@ -603,17 +632,17 @@ export default function ForecastGrid({
                                 const showPlanVar = monthSpecificPlanVar[m] ?? globalPlanVarVisible;
                                 return (
                                     <React.Fragment key={m}>
-                                        <td className="metric-cell fcst total month-start">{formatQty(t.fcstQty, 3)}</td>
-                                        <td className="metric-cell fcst total">{formatAsp(t.fcstAsp)}</td>
-                                        <td className={`metric-cell fcst total ${!showPlanVar ? 'month-separator' : ''}`}>{formatAmt(t.fcstAmt, 2)}</td>
+                                        <td className="metric-cell fcst total month-start">{renderMetricValue(formatQty(t.fcstQty, 3))}</td>
+                                        <td className="metric-cell fcst total">{renderMetricValue(formatAsp(t.fcstAsp))}</td>
+                                        <td className={`metric-cell fcst total ${!showPlanVar ? 'month-separator' : ''}`}>{renderMetricValue(formatAmt(t.fcstAmt, 2))}</td>
                                         {showPlanVar && (
                                             <>
-                                                <td className="metric-cell plan total">{formatQty(t.planQty, 3)}</td>
-                                                <td className="metric-cell plan total">{formatAsp(t.planAsp)}</td>
-                                                <td className="metric-cell plan total">{formatAmt(t.planAmt, 2)}</td>
-                                                <td className={`metric-cell var total mid-metric ${t.varQty > 0 ? 'pos' : t.varQty < 0 ? 'neg' : ''}`}>{formatQty(t.varQty, 3)}</td>
-                                                <td className={`metric-cell var total mid-metric ${t.varAsp > 0 ? 'pos' : t.varAsp < 0 ? 'neg' : ''}`}>{formatAsp(t.varAsp)}</td>
-                                                <td className={`metric-cell var total month-separator ${t.varAmt > 0 ? 'pos' : t.varAmt < 0 ? 'neg' : ''}`}>{formatAmt(t.varAmt, 2)}</td>
+                                                <td className="metric-cell plan total">{renderMetricValue(formatQty(t.planQty, 3))}</td>
+                                                <td className="metric-cell plan total">{renderMetricValue(formatAsp(t.planAsp))}</td>
+                                                <td className="metric-cell plan total">{renderMetricValue(formatAmt(t.planAmt, 2))}</td>
+                                                <td className={`metric-cell var total mid-metric ${t.varQty > 0 ? 'pos' : t.varQty < 0 ? 'neg' : ''}`}>{renderMetricValue(formatQty(t.varQty, 3))}</td>
+                                                <td className={`metric-cell var total mid-metric ${t.varAsp > 0 ? 'pos' : t.varAsp < 0 ? 'neg' : ''}`}>{renderMetricValue(formatAsp(t.varAsp))}</td>
+                                                <td className={`metric-cell var total month-separator ${t.varAmt > 0 ? 'pos' : t.varAmt < 0 ? 'neg' : ''}`}>{renderMetricValue(formatAmt(t.varAmt, 2))}</td>
                                             </>
                                         )}
                                     </React.Fragment>

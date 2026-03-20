@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getSupabasePublicConfig } from '@/lib/supabasePublicConfig';
-import { parseLegacyForecastCsv } from '@/lib/forecastLegacy';
+import { parseLegacyForecastCsv, parseLegacyForecastRecords, type LegacyForecastRecord } from '@/lib/forecastLegacy';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,10 +56,13 @@ export async function POST(req: Request) {
     } else {
       const body = await req.json().catch(() => ({}));
       forecastId = body.forecastId || 'default';
-      if (typeof body.csvText !== 'string' || !body.csvText.trim()) {
-        return NextResponse.json({ error: 'CSV content is required.' }, { status: 400 });
+      if (Array.isArray(body.rows) && body.rows.length > 0) {
+        rows = parseLegacyForecastRecords(body.rows as LegacyForecastRecord[], forecastId);
+      } else if (typeof body.csvText === 'string' && body.csvText.trim()) {
+        rows = parseLegacyForecastCsv(body.csvText, forecastId);
+      } else {
+        return NextResponse.json({ error: 'CSV content or normalized workbook rows are required.' }, { status: 400 });
       }
-      rows = parseLegacyForecastCsv(body.csvText, forecastId);
       productCharacteristics = body.productCharacteristics || {};
     }
 
