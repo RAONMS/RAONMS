@@ -57,7 +57,7 @@ async function getMergedBacklog(view?: string): Promise<BacklogRow[]> {
 
     const mappedCustom = (customData || []).map((r: any) => ({
         id: r.id,
-        cust_name: r.customer,
+        cust_name: r.cust_name,
         generic: r.product || '',
         fg_code: r.fg_code || '',
         order_no: r.order_no || '',
@@ -65,7 +65,7 @@ async function getMergedBacklog(view?: string): Promise<BacklogRow[]> {
         qty: r.qty || 0,
         amt: r.amount || 0,
         req_date: String(r.req_date || ''),
-        category_name: r.category || 'Other',
+        category_name: r.category_name || 'Other',
         remark: r.remark || '',
         is_custom: true
     }));
